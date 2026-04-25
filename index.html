@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeadGen — Apify Lead Finder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f1a;
+      --panel:    #1e1e2e;
+      --border:   #2e2e45;
+      --accent:   #6c63ff;
+      --accent-h: #5a52e0;
+      --text:     #e2e2f0;
+      --muted:    #9090b0;
+      --success:  #22c55e;
+      --error:    #ef4444;
+      --info:     #3b82f6;
+      --warn:     #f59e0b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      max-width: 860px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 860px;
+      margin: 0 auto 20px;
+    }
+
+    .card h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 18px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: #4a4a6a; }
+
+    input.has-toggle { padding-right: 52px; }
+
+    .toggle-btn {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: color 0.15s;
+      letter-spacing: 0.04em;
+    }
+    .toggle-btn:hover { color: var(--text); }
+
+    .hint {
+      font-size: 0.75rem;
+      color: #5a5a7a;
+      margin-top: 2px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: 9px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s, opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-h); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #2a2a40;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: #333350; }
+
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+
+    /* Status banner */
+    #status-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 9px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      margin-bottom: 20px;
+      max-width: 860px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #status-bar.show { display: flex; }
+    #status-bar.info    { background: #1a2a4a; border: 1px solid #2a4a7a; color: #93c5fd; }
+    #status-bar.running { background: #1a1a3a; border: 1px solid var(--accent); color: #a5b4fc; }
+    #status-bar.success { background: #0f2a1a; border: 1px solid #166534; color: #86efac; }
+    #status-bar.error   { background: #2a0f0f; border: 1px solid #7f1d1d; color: #fca5a5; }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* Results */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .results-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .count-badge {
+      display: inline-block;
+      background: #2a2a50;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 99px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    thead tr {
+      background: #16162a;
+    }
+
+    th {
+      text-align: left;
+      padding: 11px 14px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1a2e;
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:nth-child(even) { background: #171726; }
+    tbody tr:hover { background: #20203a; }
+
+    td {
+      padding: 10px 14px;
+      color: var(--text);
+      vertical-align: middle;
+      max-width: 220px;
+      word-break: break-word;
+    }
+
+    td.muted { color: var(--muted); }
+
+    td a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    td a:hover { text-decoration: underline; }
+
+    .tag {
+      display: inline-block;
+      background: #1e1e40;
+      color: #a0a0d0;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    #results-section { display: none; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(108,99,255,0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      max-width: 860px;
+      margin: 32px auto 0;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #3a3a5a;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🔍</div>
+  <div>
+    <h1>LeadGen</h1>
+    <p>Powered by Apify — find verified contacts by sector &amp; role</p>
+  </div>
+</header>
+
+<div class="card">
+  <h2>Configuration</h2>
+  <div class="form-grid">
+
+    <div class="field full">
+      <label for="api-key">Apify API Key</label>
+      <div class="input-wrap">
+        <input
+          type="password"
+          id="api-key"
+          class="has-toggle"
+          placeholder="apify_api_xxxxxxxxxxxxxxxx"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="toggle-btn" id="toggle-key" type="button">SHOW</button>
+      </div>
+      <span class="hint">Saved automatically in your browser. Find it at apify.com → Settings → Integrations.</span>
+    </div>
+
+    <div class="field">
+      <label for="sector">Sector / Business Type</label>
+      <input
+        type="text"
+        id="sector"
+        placeholder="e.g. software companies, law firms, dental clinics"
+        spellcheck="false"
+      />
+    </div>
+
+    <div class="field">
+      <label for="location">Location</label>
+      <input
+        type="text"
+        id="location"
+        placeholder="e.g. London, New York, United States"
+        spellcheck="false"
+      />
+      <span class="hint">City, region or country to search in.</span>
+    </div>
+
+    <div class="field full">
+      <label for="job-roles">Job Roles / Keywords <span style="color:#4a4a6a;font-weight:400">(optional)</span></label>
+      <input
+        type="text"
+        id="job-roles"
+        placeholder="e.g. CEO, CTO, Head of Sales"
+        spellcheck="false"
+      />
+      <span class="hint">Prepended to the search to narrow results (e.g. "CEO software companies in London").</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="generate-btn" type="button">
+        Generate Leads
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div id="status-bar">
+  <span id="status-icon"></span>
+  <span id="status-text"></span>
+</div>
+
+<div class="card" id="results-section">
+  <div class="results-header">
+    <h2>Results <span class="count-badge" id="count-badge">0</span></h2>
+    <button class="btn btn-secondary" id="export-btn" type="button">Export CSV</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead></thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>LeadGen uses the Apify Google Maps Scraper. Works on the free Apify plan. Data subject to Apify usage limits.</footer>
+
+<script>
+  // Google Maps Scraper — free plan compatible, returns business contact info
+  const ACTOR_ID   = 'compass~crawler-google-places';
+  const BASE_URL   = 'https://api.apify.com/v2';
+  const POLL_MS    = 3000;
+  const TIMEOUT_MS = 5 * 60 * 1000;
+  const STORAGE_KEY = 'leadgen_apify_token';
+
+  // Known field aliases — checked case-insensitively
+  // Includes Google Maps Scraper fields (title, phone, website, address, categoryName, etc.)
+  const FIELD_MAP = {
+    name:     ['title','name','fullName','full_name','firstName+lastName','contact_name','person','personName','placeName'],
+    company:  ['company','companyName','company_name','organization','employer','firm','account','accountName'],
+    title:    ['categoryName','category_name','jobTitle','job_title','position','role','headline','designation','type'],
+    email:    ['email','emailAddress','email_address','workEmail','work_email','personalEmail','mail'],
+    phone:    ['phone','phoneNumber','phone_number','mobile','mobilePhone','tel','telephone','contactPhone'],
+    linkedin: ['website','url','linkedinUrl','linkedin_url','linkedin','linkedInUrl','profileUrl','profile_url'],
+  };
+
+  const $ = id => document.getElementById(id);
+  let currentLeads = [];
+  let isRunning = false;
+
+  // --- API key persistence ---
+  function loadApiKey() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) $('api-key').value = saved;
+  }
+
+  $('api-key').addEventListener('input', () => {
+    const val = $('api-key').value.trim();
+    if (val) localStorage.setItem(STORAGE_KEY, val);
+    else localStorage.removeItem(STORAGE_KEY);
+  });
+
+  $('toggle-key').addEventListener('click', () => {
+    const inp = $('api-key');
+    const btn = $('toggle-key');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      btn.textContent = 'HIDE';
+    } else {
+      inp.type = 'password';
+      btn.textContent = 'SHOW';
+    }
+  });
+
+  // --- Status UI ---
+  function showStatus(msg, type, spinner = false) {
+    const bar  = $('status-bar');
+    const icon = $('status-icon');
+    const text = $('status-text');
+
+    bar.className = `show ${type}`;
+    text.textContent = msg;
+
+    if (spinner) {
+      icon.innerHTML = '<span class="spinner"></span>';
+    } else {
+      icon.innerHTML = '<span class="pulse"></span>';
+    }
+  }
+
+  function hideStatus() {
+    $('status-bar').className = '';
+  }
+
+  // --- Validation ---
+  function validate() {
+    const token    = $('api-key').value.trim();
+    const sector   = $('sector').value.trim();
+    const roles    = $('job-roles').value.trim();
+    const location = $('location').value.trim();
+
+    if (!token)  { alert('Please enter your Apify API key.'); return null; }
+    if (!sector) { alert('Please enter a sector / industry.'); return null; }
+
+    return { token, sector, roles, location };
+  }
+
+  // --- Build search query ---
+  function buildQuery(sector, roles, location) {
+    const roleList = roles.split(',').map(r => r.trim()).filter(Boolean);
+    const roleStr  = roleList.length ? `${roleList[0]} ` : '';
+    const locStr   = location ? ` in ${location}` : '';
+    return `${roleStr}${sector}${locStr}`;
+  }
+
+  // --- Apify API calls ---
+  async function apifyFetch(path, options = {}) {
+    const res = await fetch(`${BASE_URL}${path}`, options);
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error?.message || msg; } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async function startRun(token, query) {
+    const data = await apifyFetch(
+      `/acts/${ACTOR_ID}/runs?token=${encodeURIComponent(token)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          searchStringsArray: [query],
+          maxCrawledPlacesPerSearch: 50,
+          language: 'en',
+          maxImages: 0,
+          maxReviews: 0,
+        }),
+      }
+    );
+    const run = data.data ?? data;
+    return { runId: run.id, datasetId: run.defaultDatasetId };
+  }
+
+  async function pollStatus(token, runId) {
+    const deadline = Date.now() + TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await sleep(POLL_MS);
+      const data   = await apifyFetch(`/actor-runs/${runId}?token=${encodeURIComponent(token)}`);
+      const status = (data.data ?? data).status;
+      if (['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) return status;
+    }
+    return 'TIMED-OUT';
+  }
+
+  async function fetchResults(token, datasetId) {
+    const data = await apifyFetch(
+      `/datasets/${datasetId}/items?format=json&clean=true&token=${encodeURIComponent(token)}`
+    );
+    return Array.isArray(data) ? data : (data.items ?? []);
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // --- Field resolution helpers ---
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Resolve a field from a lead object using the alias list, case-insensitively
+  function resolve(lead, aliases) {
+    const keys = Object.keys(lead);
+    for (const alias of aliases) {
+      // Special: firstName+lastName concatenation
+      if (alias === 'firstName+lastName') {
+        const fn = keys.find(k => k.toLowerCase() === 'firstname');
+        const ln = keys.find(k => k.toLowerCase() === 'lastname');
+        if (fn || ln) {
+          const v = `${lead[fn] || ''} ${lead[ln] || ''}`.trim();
+          if (v) return v;
+        }
+        continue;
+      }
+      const match = keys.find(k => k.toLowerCase() === alias.toLowerCase());
+      if (match) {
+        const v = lead[match];
+        if (v !== null && v !== undefined && String(v).trim()) return String(v).trim();
+      }
+    }
+    return null;
+  }
+
+  // Get all "extra" keys not already covered by FIELD_MAP
+  function extraKeys(lead) {
+    const covered = new Set(
+      Object.values(FIELD_MAP).flat()
+        .map(a => a.toLowerCase())
+        .concat(['firstname', 'lastname'])
+    );
+    return Object.keys(lead).filter(k => {
+      if (k.startsWith('_') || k.startsWith('#')) return false;
+      if (covered.has(k.toLowerCase())) return false;
+      const v = lead[k];
+      return v !== null && v !== undefined && String(v).trim() !== '' &&
+             typeof v !== 'object';
+    });
+  }
+
+  function renderCell(v, type) {
+    if (!v) return '<span style="color:#4a4a6a">—</span>';
+    if (type === 'email') return `<a href="mailto:${esc(v)}">${esc(v)}</a>`;
+    if (type === 'linkedin') return `<a href="${esc(v)}" target="_blank" rel="noopener">View ↗</a>`;
+    if (typeof v === 'string' && /^https?:\/\//i.test(v))
+      return `<a href="${esc(v)}" target="_blank" rel="noopener">${esc(v.replace(/^https?:\/\//,''))}</a>`;
+    return esc(v);
+  }
+
+  function formatKey(k) {
+    return k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')
+            .replace(/^\w/, c => c.toUpperCase()).trim();
+  }
+
+  // --- Render results ---
+  function renderTable(leads) {
+    console.log('Raw Apify leads data:', leads);
+
+    // Collect extra keys across all leads (beyond FIELD_MAP)
+    const allExtra = [...new Set(leads.flatMap(extraKeys))];
+
+    // Build thead
+    const thead = document.querySelector('table thead');
+    const fixedCols = [
+      { label: 'Business Name', key: 'name' },
+      { label: 'Company',       key: 'company' },
+      { label: 'Category',      key: 'title' },
+      { label: 'Email',         key: 'email' },
+      { label: 'Phone',         key: 'phone' },
+      { label: 'Website',       key: 'linkedin' },
+    ];
+    thead.innerHTML = '<tr>' +
+      fixedCols.map(c => `<th>${c.label}</th>`).join('') +
+      allExtra.map(k => `<th>${formatKey(k)}</th>`).join('') +
+      '</tr>';
+
+    // Build tbody
+    const tbody = $('results-body');
+    tbody.innerHTML = '';
+
+    leads.forEach(lead => {
+      const tr = document.createElement('tr');
+      const cells = fixedCols.map(c => {
+        const v = resolve(lead, FIELD_MAP[c.key]);
+        return `<td>${renderCell(v, c.key)}</td>`;
+      });
+      allExtra.forEach(k => {
+        cells.push(`<td>${renderCell(lead[k], null)}</td>`);
+      });
+      tr.innerHTML = cells.join('');
+      tbody.appendChild(tr);
+    });
+
+    $('count-badge').textContent = leads.length;
+    $('results-section').style.display = 'block';
+    currentLeads = leads;
+  }
+
+  // --- Export CSV ---
+  function exportCsv(leads) {
+    if (!leads.length) return;
+    const allExtra = [...new Set(leads.flatMap(extraKeys))];
+    const fixedCols = [
+      { label: 'Business Name', key: 'name' },
+      { label: 'Company',       key: 'company' },
+      { label: 'Category',      key: 'title' },
+      { label: 'Email',         key: 'email' },
+      { label: 'Phone',         key: 'phone' },
+      { label: 'Website',       key: 'linkedin' },
+    ];
+
+    const headers = [
+      ...fixedCols.map(c => c.label),
+      ...allExtra.map(formatKey),
+    ];
+
+    const rows = leads.map(lead => [
+      ...fixedCols.map(c => resolve(lead, FIELD_MAP[c.key]) || ''),
+      ...allExtra.map(k => (lead[k] != null ? String(lead[k]) : '')),
+    ].map(csvCell));
+
+    const csv = [headers.map(csvCell), ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `leads_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function csvCell(v) {
+    const s = String(v ?? '');
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  // --- Main flow ---
+  async function generateLeads() {
+    if (isRunning) return;
+    const inputs = validate();
+    if (!inputs) return;
+
+    isRunning = true;
+    $('generate-btn').disabled = true;
+    $('generate-btn').textContent = 'Running…';
+    $('results-section').style.display = 'none';
+    currentLeads = [];
+
+    try {
+      const query = buildQuery(inputs.sector, inputs.roles, inputs.location);
+      showStatus(`Starting Apify run for: "${query}"`, 'info', true);
+
+      const { runId, datasetId } = await startRun(inputs.token, query);
+      showStatus('Scraping in progress — this can take 1–3 minutes…', 'running', true);
+
+      const status = await pollStatus(inputs.token, runId);
+
+      if (status === 'SUCCEEDED') {
+        showStatus('Fetching results…', 'info', true);
+        const leads = await fetchResults(inputs.token, datasetId);
+
+        if (leads.length === 0) {
+          showStatus('Run completed but no leads were found. Try broadening your search.', 'error');
+        } else {
+          renderTable(leads);
+          showStatus(`${leads.length} leads found for "${query}"`, 'success');
+        }
+      } else if (status === 'TIMED-OUT') {
+        showStatus('Search timed out after 5 minutes. Try a more specific query.', 'error');
+      } else {
+        showStatus(`Run ended with status: ${status}. Check your API key and actor permissions.`, 'error');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    } finally {
+      isRunning = false;
+      $('generate-btn').disabled = false;
+      $('generate-btn').textContent = 'Generate Leads';
+    }
+  }
+
+  // --- Event listeners ---
+  $('generate-btn').addEventListener('click', generateLeads);
+  $('export-btn').addEventListener('click', () => exportCsv(currentLeads));
+
+  // --- Init ---
+  loadApiKey();
+</script>
+
+</body>
+</html>
