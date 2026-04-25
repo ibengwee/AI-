@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(git -C /Users/beng/AI remote get-url origin)"
+    ]
+  }
+}

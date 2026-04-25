@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PriceCheck — Find the Cheapest Deal</title>
+  <style>
+    :root {
+      --bg:           #0f0f1a;
+      --panel:        #1e1e2e;
+      --border:       #2a2a3e;
+      --accent:       #6c63ff;
+      --accent-h:     #5a52e0;
+      --text:         #e0e0f0;
+      --muted:        #888;
+      --success:      #4caf87;
+      --error:        #e05a5a;
+      --running:      #5090e0;
+      --gold:         #f5c842;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    header h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; }
+    header h1 span { color: var(--accent); }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 720px;
+      margin: 0 auto 20px;
+    }
+
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .input-wrap { position: relative; display: flex; }
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    input[type="password"] { padding-right: 52px; }
+
+    .toggle-btn {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      background: none; border: none; color: var(--muted);
+      padding: 0 14px; cursor: pointer; font-size: 0.8rem;
+    }
+    .toggle-btn:hover { color: var(--text); }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .btn {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 13px;
+      margin-top: 4px;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn:hover { background: var(--accent-h); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    #status-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      max-width: 720px;
+      margin: 0 auto 20px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      border: 1px solid transparent;
+    }
+    #status-bar.info    { background: #1a2a40; border-color: var(--running); color: var(--running); }
+    #status-bar.success { background: #1a2e25; border-color: var(--success); color: var(--success); }
+    #status-bar.error   { background: #2e1a1a; border-color: var(--error);   color: var(--error); }
+
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+    }
+    .dot.pulse { animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    #results-section { display: none; max-width: 960px; margin: 0 auto; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .results-header h2 { font-size: 1rem; font-weight: 600; }
+
+    #cheapest-banner {
+      background: linear-gradient(135deg, #1e2e1e, #1a2a1a);
+      border: 1px solid var(--success);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .trophy { font-size: 2rem; }
+    .cheapest-info h3 { color: var(--success); font-size: 1rem; margin-bottom: 4px; }
+    .cheapest-info p { font-size: 0.85rem; color: var(--muted); }
+    .cheapest-price { margin-left: auto; font-size: 1.6rem; font-weight: 700; color: var(--gold); white-space: nowrap; }
+
+    .export-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 7px 14px;
+      transition: border-color 0.2s;
+    }
+    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    thead { background: #161625; position: sticky; top: 0; }
+    th {
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    th:hover { color: var(--text); }
+    th.sorted { color: var(--accent); }
+    th.sorted::after { content: ' ↑'; }
+    th.sorted.desc::after { content: ' ↓'; }
+
+    td {
+      padding: 11px 14px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(108,99,255,0.05); }
+    tr.cheapest td { background: rgba(76,175,135,0.07); }
+
+    .rank { color: var(--muted); font-size: 0.8rem; text-align: center; }
+    .rank-1 { color: var(--gold); font-weight: 700; font-size: 1rem; }
+
+    .thumb { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; background: var(--bg); display: block; }
+    .no-thumb { width: 48px; height: 48px; border-radius: 6px; background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1.2rem; }
+
+    .price-cell { font-weight: 700; color: var(--gold); white-space: nowrap; }
+    tr.cheapest .price-cell { color: var(--success); }
+
+    .store-cell { color: var(--text); }
+    .rating-cell { color: var(--muted); white-space: nowrap; }
+    .stars { color: var(--gold); }
+
+    .link-btn {
+      display: inline-block;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .link-btn:hover { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+
+    .title-cell { max-width: 260px; }
+    .title-cell a { color: var(--text); text-decoration: none; }
+    .title-cell a:hover { color: var(--accent); }
+
+    .badge {
+      display: inline-block;
+      background: var(--success);
+      color: #0f1f15;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 600px) {
+      .row { grid-template-columns: 1fr; }
+      #cheapest-banner { flex-wrap: wrap; }
+      .cheapest-price { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Price<span>Check</span></h1>
+  <p>Find the cheapest deal across the web</p>
+</header>
+
+<div class="card">
+  <div class="field">
+    <label>Apify API Key</label>
+    <div class="input-wrap">
+      <input type="password" id="api-key" placeholder="apify_api_xxxxxxxxxxxx" autocomplete="off">
+      <button class="toggle-btn" onclick="toggleKey()">Show</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Product to Search</label>
+    <input type="text" id="product" placeholder='e.g. "iPhone 15 Pro 256GB"'>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Max Results</label>
+      <select id="max-results">
+        <option value="10">10 results</option>
+        <option value="20" selected>20 results</option>
+        <option value="40">40 results</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Country</label>
+      <select id="country">
+        <option value="us">United States</option>
+        <option value="gb">United Kingdom</option>
+        <option value="au">Australia</option>
+        <option value="ca">Canada</option>
+        <option value="sg">Singapore</option>
+        <option value="my">Malaysia</option>
+        <option value="in">India</option>
+        <option value="de">Germany</option>
+        <option value="fr">France</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn" id="search-btn" onclick="searchPrices()">Find Cheapest Price</button>
+</div>
+
+<div id="status-bar">
+  <div class="dot" id="status-dot"></div>
+  <span id="status-msg"></span>
+</div>
+
+<div id="results-section">
+  <div id="cheapest-banner">
+    <div class="trophy">🏆</div>
+    <div class="cheapest-info">
+      <h3 id="cheapest-title">—</h3>
+      <p id="cheapest-store">—</p>
+    </div>
+    <div class="cheapest-price" id="cheapest-price">—</div>
+  </div>
+
+  <div class="results-header">
+    <h2 id="result-count"></h2>
+    <button class="export-btn" onclick="exportCsv()">Export CSV</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const ACTOR_ID   = 'apify/google-shopping-scraper';
+  const BASE_URL   = 'https://api.apify.com/v2';
+  const POLL_MS    = 3000;
+  const TIMEOUT_MS = 5 * 60 * 1000;
+  const STORAGE_KEY = 'pricecheck_apify_token';
+
+  const FIELD_MAP = {
+    title:    ['title','name','productName','product_name','itemTitle','description'],
+    price:    ['price','currentPrice','current_price','salePrice','sale_price','priceText','minPrice','lowestPrice'],
+    store:    ['seller','source','store','merchant','shopName','shop_name','vendor','retailer','domain'],
+    rating:   ['rating','stars','ratingValue','reviewScore','score'],
+    reviews:  ['reviewsCount','reviews','ratingsCount','numReviews','reviewCount','totalReviews'],
+    url:      ['url','link','productUrl','product_url','href','pageUrl','shoppingUrl'],
+    image:    ['thumbnailUrl','thumbnail','image','imageUrl','img','photo','imgUrl','mainImage'],
+  };
+
+  let currentLeads = [];
+  let sortCol = 'price';
+  let sortAsc = true;
+
+  /* ---------- API key ---------- */
+  (function init() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) document.getElementById('api-key').value = saved;
+  })();
+
+  document.getElementById('api-key').addEventListener('input', function () {
+    localStorage.setItem(STORAGE_KEY, this.value.trim());
+  });
+
+  function toggleKey() {
+    const el = document.getElementById('api-key');
+    const btn = el.nextElementSibling;
+    el.type = el.type === 'password' ? 'text' : 'password';
+    btn.textContent = el.type === 'password' ? 'Show' : 'Hide';
+  }
+
+  /* ---------- Status ---------- */
+  function showStatus(msg, type) {
+    const bar = document.getElementById('status-bar');
+    const dot = document.getElementById('status-dot');
+    bar.className = type;
+    bar.style.display = 'flex';
+    document.getElementById('status-msg').textContent = msg;
+    dot.className = 'dot' + (type === 'info' ? ' pulse' : '');
+  }
+  function hideStatus() { document.getElementById('status-bar').style.display = 'none'; }
+
+  /* ---------- Field resolution ---------- */
+  function resolve(item, aliases) {
+    const keys = Object.keys(item).map(k => ({ low: k.toLowerCase(), orig: k }));
+    for (const alias of aliases) {
+      if (alias.includes('+')) {
+        const parts = alias.split('+').map(p => {
+          const match = keys.find(k => k.low === p.toLowerCase());
+          return match ? String(item[match.orig] || '').trim() : '';
+        });
+        const joined = parts.filter(Boolean).join(' ');
+        if (joined) return joined;
+      }
+      const match = keys.find(k => k.low === alias.toLowerCase());
+      if (match && item[match.orig] != null && item[match.orig] !== '') return item[match.orig];
+    }
+    return null;
+  }
+
+  /* ---------- Price parsing ---------- */
+  function parsePrice(raw) {
+    if (raw == null) return Infinity;
+    const num = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? Infinity : num;
+  }
+
+  function formatPrice(raw) {
+    if (raw == null || raw === '') return '—';
+    return String(raw);
+  }
+
+  function starsHtml(rating) {
+    if (!rating) return '—';
+    const n = parseFloat(rating);
+    if (isNaN(n)) return String(rating);
+    const full = Math.floor(n);
+    const half = n - full >= 0.5 ? 1 : 0;
+    return `<span class="stars">${'★'.repeat(full)}${'½'.repeat(half)}${'☆'.repeat(5 - full - half)}</span> ${n.toFixed(1)}`;
+  }
+
+  /* ---------- Apify API ---------- */
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(`${BASE_URL}${path}`, options);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  async function startRun(token, query, maxResults, country) {
+    const data = await apiFetch(`/acts/${ACTOR_ID}/runs?token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        queries: [query],
+        maxResults: parseInt(maxResults),
+        countryCode: country,
+        language: 'en',
+      }),
+    });
+    return { runId: data.data.id, datasetId: data.data.defaultDatasetId };
+  }
+
+  async function pollStatus(token, runId) {
+    const deadline = Date.now() + TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, POLL_MS));
+      const data = await apiFetch(`/actor-runs/${runId}?token=${token}`);
+      const status = data.data.status;
+      if (status === 'SUCCEEDED') return 'SUCCEEDED';
+      if (['FAILED','ABORTED','TIMED-OUT'].includes(status)) return status;
+    }
+    return 'TIMEOUT';
+  }
+
+  async function fetchResults(token, datasetId) {
+    const data = await apiFetch(`/datasets/${datasetId}/items?format=json&clean=true&token=${token}`);
+    return Array.isArray(data) ? data : [];
+  }
+
+  /* ---------- Render ---------- */
+  function renderTable(leads) {
+    const cols = [
+      { key: 'rank',    label: '#',       sortable: false },
+      { key: 'image',   label: 'Image',   sortable: false },
+      { key: 'title',   label: 'Product', sortable: true },
+      { key: 'store',   label: 'Store',   sortable: true },
+      { key: 'price',   label: 'Price',   sortable: true },
+      { key: 'rating',  label: 'Rating',  sortable: true },
+      { key: 'link',    label: 'Link',    sortable: false },
+    ];
+
+    const thead = document.getElementById('thead');
+    thead.innerHTML = '<tr>' + cols.map(c => {
+      if (!c.sortable) return `<th>${c.label}</th>`;
+      const active = sortCol === c.key;
+      const cls = active ? (sortAsc ? 'sorted' : 'sorted desc') : '';
+      return `<th class="${cls}" onclick="sortBy('${c.key}')">${c.label}</th>`;
+    }).join('') + '</tr>';
+
+    const sorted = [...leads].sort((a, b) => {
+      if (sortCol === 'price') {
+        const diff = parsePrice(a._price) - parsePrice(b._price);
+        return sortAsc ? diff : -diff;
+      }
+      if (sortCol === 'rating') {
+        const diff = parseFloat(a._rating || 0) - parseFloat(b._rating || 0);
+        return sortAsc ? diff : -diff;
+      }
+      const va = String(a['_' + sortCol] || '').toLowerCase();
+      const vb = String(b['_' + sortCol] || '').toLowerCase();
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = sorted.map((item, i) => {
+      const rank = i + 1;
+      const cheapest = rank === 1;
+      const imgSrc = item._image;
+      const imgHtml = imgSrc
+        ? `<img class="thumb" src="${escHtml(imgSrc)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-thumb>📦</div>'">`
+        : '<div class="no-thumb">📦</div>';
+      const title = escHtml(item._title || '—');
+      const store = escHtml(item._store || '—');
+      const price = formatPrice(item._price);
+      const url   = item._url;
+      const linkHtml = url
+        ? `<a class="link-btn" href="${escHtml(url)}" target="_blank" rel="noopener">View Deal →</a>`
+        : '—';
+      const badge = cheapest ? '<span class="badge">Cheapest</span>' : '';
+
+      return `<tr class="${cheapest ? 'cheapest' : ''}">
+        <td class="rank ${cheapest ? 'rank-1' : ''}">${cheapest ? '🏆' : rank}</td>
+        <td>${imgHtml}</td>
+        <td class="title-cell">${url ? `<a href="${escHtml(url)}" target="_blank" rel="noopener">${title}</a>` : title}${badge}</td>
+        <td class="store-cell">${store}</td>
+        <td class="price-cell">${escHtml(price)}</td>
+        <td class="rating-cell">${starsHtml(item._rating)}${item._reviews ? ` <small style="color:var(--muted)">(${item._reviews})</small>` : ''}</td>
+        <td>${linkHtml}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function updateCheapestBanner(leads) {
+    const sorted = [...leads].sort((a, b) => parsePrice(a._price) - parsePrice(b._price));
+    const best = sorted[0];
+    if (!best) return;
+    document.getElementById('cheapest-title').textContent = best._title || '—';
+    document.getElementById('cheapest-store').textContent = best._store || '—';
+    document.getElementById('cheapest-price').textContent = formatPrice(best._price);
+  }
+
+  function sortBy(col) {
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = col === 'price'; }
+    renderTable(currentLeads);
+  }
+
+  /* ---------- Main flow ---------- */
+  async function searchPrices() {
+    const token   = document.getElementById('api-key').value.trim();
+    const product = document.getElementById('product').value.trim();
+    const maxRes  = document.getElementById('max-results').value;
+    const country = document.getElementById('country').value;
+
+    if (!token)   { alert('Enter your Apify API key.'); return; }
+    if (!product) { alert('Enter a product to search.'); return; }
+
+    const btn = document.getElementById('search-btn');
+    btn.disabled = true;
+    document.getElementById('results-section').style.display = 'none';
+
+    try {
+      showStatus('Starting Apify run…', 'info');
+      const { runId, datasetId } = await startRun(token, product, maxRes, country);
+
+      showStatus('Searching prices across the web…', 'info');
+      const status = await pollStatus(token, runId);
+
+      if (status !== 'SUCCEEDED') {
+        showStatus(status === 'TIMEOUT'
+          ? 'Search timed out after 5 minutes.'
+          : `Run ended with status: ${status}. Check your API key.`, 'error');
+        return;
+      }
+
+      showStatus('Fetching results…', 'info');
+      const raw = await fetchResults(token, datasetId);
+
+      if (!raw.length) {
+        showStatus('No results returned. Try a different product or country.', 'error');
+        return;
+      }
+
+      // Detect free-plan restriction error
+      const errItem = raw.find(r => r.ERROR && String(r.ERROR).includes('free Apify plan'));
+      if (errItem) {
+        showStatus('This actor requires a paid Apify plan. Switch the actor in the code (see CLAUDE.md).', 'error');
+        return;
+      }
+
+      // Attach resolved fields prefixed with _
+      currentLeads = raw.map(item => ({
+        ...item,
+        _title:   resolve(item, FIELD_MAP.title),
+        _price:   resolve(item, FIELD_MAP.price),
+        _store:   resolve(item, FIELD_MAP.store),
+        _rating:  resolve(item, FIELD_MAP.rating),
+        _reviews: resolve(item, FIELD_MAP.reviews),
+        _url:     resolve(item, FIELD_MAP.url),
+        _image:   resolve(item, FIELD_MAP.image),
+      }));
+
+      // Sort cheapest first by default
+      sortCol = 'price'; sortAsc = true;
+
+      updateCheapestBanner(currentLeads);
+      renderTable(currentLeads);
+
+      document.getElementById('result-count').textContent =
+        `${currentLeads.length} result${currentLeads.length !== 1 ? 's' : ''} for "${product}"`;
+      document.getElementById('results-section').style.display = 'block';
+      showStatus(`${currentLeads.length} prices found — sorted cheapest first`, 'success');
+
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ---------- CSV Export ---------- */
+  function exportCsv() {
+    if (!currentLeads.length) return;
+    const cols = ['title','store','price','rating','reviews','url'];
+    const headers = ['Product','Store','Price','Rating','Reviews','URL'];
+    const rows = currentLeads
+      .slice()
+      .sort((a, b) => parsePrice(a._price) - parsePrice(b._price))
+      .map(item => cols.map(c => {
+        const v = item['_' + c] != null ? String(item['_' + c]) : '';
+        return '"' + v.replace(/"/g, '""') + '"';
+      }).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'prices.csv';
+    a.click();
+  }
+
+  /* ---------- Utils ---------- */
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+
+</body>
+</html>
