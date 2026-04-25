@@ -13,13 +13,13 @@
       --white:     #ffffff;
       --border:    #e0ddd6;
       --border-l:  #ebe8e2;
-      --accent:    #b07d3a;
-      --accent-h:  #8f6428;
-      --accent-dim:rgba(176,125,58,0.08);
+      --accent:    #8a5f1e;
+      --accent-h:  #6e4c16;
+      --accent-dim:rgba(138,95,30,0.08);
       --text:      #1a1a18;
       --text-2:    #6b6860;
-      --muted:     #999690;
-      --dim:       #c8c5be;
+      --muted:     #767370;
+      --dim:       #8a8780;
       --success:   #3a7d52;
       --error:     #b03a3a;
       --info:      #3a5a7d;
@@ -123,7 +123,7 @@
 
     /* ── Section ──────────────────────────────────── */
     .section {
-      max-width: 760px;
+      max-width: 900px;
       margin: 0 auto;
       padding: 72px 60px;
       border-bottom: 1px solid var(--border-l);
@@ -177,9 +177,9 @@
     label .opt {
       font-weight: 300;
       text-transform: none;
-      letter-spacing: 0;
+      letter-spacing: 0.04em;
       font-size: 0.68rem;
-      color: var(--dim);
+      color: var(--muted);
     }
 
     .input-wrap {
@@ -192,6 +192,7 @@
 
     .input-wrap:focus-within {
       border-color: var(--accent);
+      box-shadow: 0 2px 0 0 var(--accent);
     }
 
     input {
@@ -202,11 +203,11 @@
       color: var(--text);
       font-size: 1rem;
       font-family: 'DM Sans', sans-serif;
-      font-weight: 300;
+      font-weight: 400;
       outline: none;
     }
 
-    input::placeholder { color: var(--dim); }
+    input::placeholder { color: var(--dim); font-weight: 300; }
     input.has-toggle   { padding-right: 52px; }
 
     .toggle-btn {
@@ -217,6 +218,8 @@
       color: var(--muted);
       cursor: pointer;
       font-size: 0.62rem;
+      text-decoration: underline;
+      text-underline-offset: 2px;
       font-weight: 500;
       font-family: 'DM Sans', sans-serif;
       letter-spacing: 0.14em;
